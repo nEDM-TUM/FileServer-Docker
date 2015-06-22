@@ -16,7 +16,6 @@ RUN mkdir /database_attachments
 VOLUME [ "/var/log/supervisor", "/database_attachments" ]
 
 COPY ./nginx.conf.in /nginx.conf.in
-COPY ./uwsgi.conf /etc/init/uwsgi.conf
 COPY ./docker-entrypoint.sh /entrypoint.sh
 COPY ./wsgi.ini /etc/uwsgi/vassals/wsgi.ini
 COPY ./handle_req.py /home/uwsgi/handle_req.py
