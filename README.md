@@ -28,7 +28,12 @@ and the HTTP verbs: `GET, PUT, DELETE`
 For `GET`, the user requires read access to the CouchDB document.
 For `PUT and DELETE`, the user requires write access to the CouchDB document.
 
-docker run -it -p 80:80 -p 15984:5984 -v ~/tmp/uwsgi:/var/log/supervisor -v  --link db:db webapp1
+An example command:
+
+```sh
+docker run -it -p 80:80 -p 5984:5984 -v ~/tmp/uwsgi:/var/log/supervisor --link db:db webapp1
+```
+
 ### Setup options
 
 1. Mount attachments directory (R/W) to `/database_attachments`
