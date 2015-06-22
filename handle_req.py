@@ -9,18 +9,11 @@ logging.basicConfig(filename='/var/log/supervisor/wsgi.log',level=logging.DEBUG)
 _nginx_prefix = "protected"
 _save_dir = "/database_attachments"
 
-class StandIn(object):
-    status_code = 403
-    def json(self):
-        return { "standin" : True }
-
-    def raise_for_status(self):
-        raise Denied("")
-        pass
-
 class LocalException(Exception):
-    def __init__(self, msg):
-        self.msg = json.dumps(msg)
+    def __init__(self, msg=None):
+        self.msg = ""
+        if msg is not None:
+            self.msg = json.dumps(msg)
 
 class Authorized(LocalException):
     msg_type = "200 Ok"
@@ -28,8 +21,105 @@ class Authorized(LocalException):
 class Denied(LocalException):
     msg_type = "403 Forbidden"
 
+class NotFound(LocalException):
+    msg_type = "404 Not Found"
+
+class BadRequest(LocalException):
+    msg_type = "400 Bad Request"
+
 def log(msg):
     logging.info(msg)
+
+def down_sample_file(start_resp, file_name, flags):
+    """
+    File structure is:
+       bytes 0..3: length of json header N (excluding header word)
+       bytes 4..4+N: json header (ASCII data)
+       bytes 4+N+1..EOF: binary data of channels
+
+    The binary data format depends on what's in the json header:
+      header["channel_list"] ---> ordered list of channels
+      header["byte_depth"]    ---> size of binary word
+      header["bit_shift"]    ---> amount to shift right
+
+	Every channel is listed one after another for each time point (fully
+    interlaced)
+
+    """
+    import urllib
+    import struct
+    import numpy
+    file_name = urllib.url2pathname(file_name)
+    if not os.path.exists(file_name):
+        raise NotFound()
+
+    ds = 2
+    try:
+      assert(flags[0] == "downsample")
+      ds = int(flags[1])
+    except:
+      raise BadRequest({"error" : True, "reason" : "url flags not correct"})
+
+    base, ext = os.path.splitext(os.path.basename(file_name))
+    new_file_name = base + "_downsample" + ext
+
+    if ds < 2:
+      raise BadRequest({"error" : True, "reason" : "Downsample must be greater than 1"})
+
+    def send_header(fn, length):
+       start_resp("200 OK", [
+         ("Content-Type" ,"application/octet-stream"),
+         ("Content-Disposition", "attachment; filename=\"{}\"".format(fn)),
+         ("Content-Length", "{} ".format(length))
+       ])
+
+    with open(file_name, "rb") as o:
+        header_length = struct.unpack("<L", o.read(4))[0]
+        data_length = os.path.getsize(file_name) - header_length
+
+        o.seek(4)
+        hdr = json.loads(o.read(header_length))
+        try:
+            bit_depth = hdr["bit_depth"]
+        except:
+            bit_depth = hdr["byte_depth"]
+        bit_shift = hdr["bit_shift"]
+        dt = None
+        if bit_depth == 2: dt = numpy.int16
+        elif bit_depth ==4: dt = numpy.int32
+        else: raise Exception("unknown bit_depth")
+
+        # Reads from position 4 + header_length
+        o.seek(4+header_length)
+
+        # Do a right shift if necessary
+        cl = hdr["channel_list"]
+        total_ch = len(cl)
+        hdr["downsample"] = ds
+        hdr["bit_shift"] = 0
+
+        # output header
+        hdr_as_str = json.dumps(hdr)
+        chunk_size = total_ch*bit_depth*ds
+        expected_length = 4 + len(hdr_as_str) + (data_length/chunk_size)*total_ch*bit_depth
+
+        send_header(new_file_name, expected_length)
+        yield numpy.array([len(hdr_as_str)], dtype=numpy.uint32).tostring()
+        yield hdr_as_str
+        # Read file in chunks
+
+        while True:
+            dat = o.read(10*1024*chunk_size)
+            if not dat: break
+            leng_read = len(dat)
+            if leng_read % chunk_size != 0:
+              new_length = leng_read / chunk_size
+              dat = dat[:new_length*chunk_size]
+            new_arr = numpy.fromstring(dat, dtype=dt)
+            if bit_shift != 0:
+                new_arr = numpy.right_shift(new_arr, bit_shift)
+            new_arr = new_arr.reshape(-1, ds, total_ch)
+            yield new_arr.mean(axis=1).astype(dt).tostring()
 
 class Handler(object):
     def __init__(self, env):
@@ -94,11 +184,13 @@ class Handler(object):
         return self.interact_with_db(db_path, 'put',data=json.dumps({ fn : True}))
 
     def interact_with_db(self, path, verb, **kwargs):
-        #return StandIn()
         all_cookies = self.env.get("HTTP_COOKIE", "").split("; ")
         ret_dict = dict([c.split('=') for c in all_cookies if c.find("=") != -1])
-        acct = cloudant.Account("http://127.0.0.1:5984")
-        return getattr(acct, verb)(path, cookies=ret_dict, **kwargs)
+        acct = cloudant.Account("http://db:5984")
+        headers = {}
+        if "HTTP_AUTHORIZATION" in self.env:
+            headers["Authorization"] = self.env["HTTP_AUTHORIZATION"]
+        return getattr(acct, verb)(path, cookies=ret_dict, headers=headers,**kwargs)
 
     def verify_user(self, path, **kwargs):
         func_type = None
@@ -120,38 +212,52 @@ class Handler(object):
         raise Authorized(dict(ok=True))
 
     def path(self):
-        apath = self.env["REQUEST_URI"].split('/')
-        if len(apath) < 4: 
+        apath = [p for p in self.env["REQUEST_URI"].split('/') if p != '']
+        if len(apath) < 4:
             raise Denied(dict(error=True, reason="malformed request'"))
         return {
           "function" : self.env["REQUEST_METHOD"],
           "db" : apath[1],
           "id" : apath[2],
-          "attachment" : apath[3]
+          "attachment" : apath[3],
+          "flags" : apath[4:]
         }
+
 
 def application(env, start_response):
     try:
       handler = Handler(env)
-      handler.output_env()
+      #handler.output_env()
       handler.authorization()
     except (Authorized,Denied) as d:
-      start_response(d.msg_type, [ 
+      start_response(d.msg_type, [
             ('Content-Type', 'application/json'),
       ])
       return json.dumps(d.msg)
-     
+    except:
+      import traceback
+      log(traceback.format_exc())
+
     # Now handle normal requests
     try:
       fn = handler.function
       info = handler.path()
       info["db_esc"] = info["db"].replace("%2F", "/")
       if fn == "GET":
-          start_response('200 OK', [
-             ('X-Accel-Redirect', '/protected/{db_esc}/{id}/{attachment}'.format(**info)),
-             ('Content-Type', 'application/octet-stream'),
-             ('Content-Disposition', 'attachment; filename={attachment}'.format(**info)),
-          ])
+          base, ext = os.path.splitext(info["attachment"])
+          if len(info["flags"]) > 0 and ext == ".dig":
+              try:
+                 return down_sample_file(start_response,
+                  "{save_dir}/{db_esc}/{id}/{attachment}".format(save_dir=_save_dir, **info),
+                  info["flags"])
+              except LocalException as e:
+                start_response(e.msg_type, [])
+          else:
+              start_response('200 OK', [
+                 ('X-Accel-Redirect', '/protected/{db_esc}/{id}/{attachment}'.format(**info)),
+                 ('Content-Type', 'application/octet-stream'),
+                 ('Content-Disposition', 'attachment; filename={attachment}'.format(**info)),
+              ])
       elif fn == "PUT":
           push_to_path = '{db}/_design/nedm_default/_update/attachment/{id}'.format(**info)
           ret = handler.process_upload("/{save_dir}/{db_esc}/{id}/{attachment}".format(save_dir=_save_dir,**info), push_to_path)
