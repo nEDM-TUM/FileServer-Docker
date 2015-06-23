@@ -37,6 +37,13 @@ docker run -it -p 80:80 -p 5984:5984 -v ~/tmp/uwsgi:/var/log/supervisor --link d
 ### Setup options
 
 1. Mount attachments directory (R/W) to `/database_attachments`
+1. Pass environment variables to the container to define virtual servers
+(multiple may be passed, the must simply have a different `_my_suffix`):
+
+    ```bash
+    -e 'NGX_VIRTUAL_SERVER[_my_suffix]=db.name.org@/path/to/rewrite'
+    ```
+
 1. (Optional) Mount supervisor log directory (R/W) to view the output of the file-server backend to `/var/log/supervisor`
 1. Link to the nEDM couchdb container (`--line name_of_container:db`)
 1. Export port(s) 80 and/or 5984

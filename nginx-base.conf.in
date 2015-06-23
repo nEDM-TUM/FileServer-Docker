@@ -1,0 +1,31 @@
+listen          80;
+listen          5984;
+location / {
+    proxy_pass http://@DB_NAME@:5984$redirect_uri$request_uri;
+    proxy_redirect    off;
+    proxy_buffering   off;
+}
+
+location /_attachments {
+    auth_request               /auth;
+    limit_except PUT GET DELETE  { deny all; }
+    client_body_buffer_size    10M;
+    client_body_temp_path      /database_attachments/_tmp/;
+    client_body_in_file_only   on;
+
+    include uwsgi_params;
+    uwsgi_pass_request_body off;
+    uwsgi_param X-FILE $request_body_file;
+    uwsgi_pass unix:/tmp/wsgi.sock;
+}
+
+location /auth {
+    internal;
+    include uwsgi_params;
+    uwsgi_pass_request_body off;
+    uwsgi_pass unix:/tmp/wsgi.sock;
+}
+location /protected {
+    internal;
+    alias /database_attachments/;
+}
