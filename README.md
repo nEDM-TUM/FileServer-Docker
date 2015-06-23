@@ -123,7 +123,7 @@ o = upload_file_with_curl(file_name, _server + '/_attachments/{db}/{id}/{att_nam
 print json.dumps(o, indent=4)
 ```
 
-# Download
+### Download
 
 This is notable simpler, and this time we may use `requests`:
 
@@ -147,7 +147,7 @@ def download_file(file_name, get_from_path):
 download_file(file_name, _server + '/_attachments/{db}/{id}/{att_name}'.format(**submit))
 ```
 
-# Delete
+### Delete
 
 ```python
 ...
