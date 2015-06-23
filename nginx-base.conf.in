@@ -20,6 +20,13 @@ location /_attachments {
     uwsgi_pass unix:/tmp/wsgi.sock;
 }
 
+location ~ /_(session|all_dbs)$ {
+    proxy_pass http://@DB_NAME@:5984$request_uri;
+    proxy_redirect    off;
+    proxy_buffering   off;
+    proxy_set_header Host $host;
+}
+
 location /auth {
     internal;
     include uwsgi_params;
