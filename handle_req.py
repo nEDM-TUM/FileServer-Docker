@@ -30,7 +30,7 @@ class BadRequest(LocalException):
 def log(msg):
     logging.info(msg)
 
-def down_sample_file(start_resp, file_name, flags):
+def down_sample_file(start_resp, file_name, flags, header_only):
     """
     File structure is:
        bytes 0..3: length of json header N (excluding header word)
@@ -104,6 +104,8 @@ def down_sample_file(start_resp, file_name, flags):
         expected_length = 4 + len(hdr_as_str) + (data_length/chunk_size)*total_ch*bit_depth
 
         send_header(new_file_name, expected_length)
+        if header_only:
+            return
         yield numpy.array([len(hdr_as_str)], dtype=numpy.uint32).tostring()
         yield hdr_as_str
         # Read file in chunks
@@ -136,7 +138,7 @@ class Handler(object):
         fn = self.function
         info = self.path()
         data = {}
-        if fn == "GET":
+        if fn in ["GET", "HEAD"]:
             name = '{db}/{id}'
         elif fn in ["PUT", "DELETE"]:
             name = '{db}/_design/nedm_default/_update/attachment/{id}'
@@ -195,7 +197,7 @@ class Handler(object):
     def verify_user(self, path, **kwargs):
         func_type = None
         verb = self.function
-        if verb == "GET":
+        if verb in ["GET", "HEAD"]:
             func_type = 'get'
         elif verb in ["PUT", "DELETE"]:
             func_type = 'put'
@@ -243,13 +245,13 @@ def application(env, start_response):
       fn = handler.function
       info = handler.path()
       info["db_esc"] = info["db"].replace("%2F", "/")
-      if fn == "GET":
+      if fn in ["GET", "HEAD"]:
           base, ext = os.path.splitext(info["attachment"])
           if len(info["flags"]) > 0 and ext == ".dig":
               try:
                  return down_sample_file(start_response,
                   "{save_dir}/{db_esc}/{id}/{attachment}".format(save_dir=_save_dir, **info),
-                  info["flags"])
+                  info["flags"], fn == "HEAD")
               except LocalException as e:
                 start_response(e.msg_type, [])
           else:
