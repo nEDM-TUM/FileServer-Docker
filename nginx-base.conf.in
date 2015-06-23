@@ -4,6 +4,7 @@ location / {
     proxy_pass http://@DB_NAME@:5984$redirect_uri$request_uri;
     proxy_redirect    off;
     proxy_buffering   off;
+    proxy_set_header Host $host;
 }
 
 location /_attachments {
