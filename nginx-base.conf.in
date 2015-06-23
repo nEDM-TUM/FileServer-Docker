@@ -27,6 +27,13 @@ location ~ /_(session|all_dbs)$ {
     proxy_set_header Host $host;
 }
 
+location ~ /page/([^/]*)/nedm/([^/]*) {
+    proxy_pass http://@DB_NAME@:5984$redirect_uri/page/$1/nedm%2F$2;
+    proxy_redirect    off;
+    proxy_buffering   off;
+    proxy_set_header Host $host;
+}
+
 location /auth {
     internal;
     include uwsgi_params;
