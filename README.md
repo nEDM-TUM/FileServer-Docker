@@ -156,3 +156,12 @@ acct = cloudant.Account(_server)
 o = acct.delete(_server + '/_attachments/{db}/{id}/{att_name}'.format(**submit)).json()
 print json.dumps(o, indent=4)
 ```
+
+### Head
+
+```python
+...
+acct = cloudant.Account(_server)
+...
+o = acct.head(_server + '/_attachments/{db}/{id}/{att_name}'.format(**submit))
+```
