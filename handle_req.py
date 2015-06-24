@@ -8,6 +8,7 @@ logging.basicConfig(filename='/var/log/supervisor/wsgi.log',level=logging.DEBUG)
 
 _nginx_prefix = "protected"
 _save_dir = "/database_attachments"
+_file_mode = @FILEMODE@
 
 class LocalException(Exception):
     def __init__(self, msg=None):
@@ -168,6 +169,7 @@ class Handler(object):
         if not os.path.exists(adir):
             os.makedirs(adir)
         os.rename(self.file_location, save_path)
+        os.chmod(save_path, _file_mode)
         md5 = subprocess.check_output(["md5sum", save_path]).split(' ')[0]
         ast = os.stat(save_path)
         fn = os.path.basename(save_path)
