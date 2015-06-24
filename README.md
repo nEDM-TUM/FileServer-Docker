@@ -44,6 +44,18 @@ docker run -it -p 80:80 -p 5984:5984 -v ~/tmp/uwsgi:/var/log/supervisor --link d
     -e 'NGX_VIRTUAL_SERVER[_my_suffix]=db.name.org@/path/to/rewrite'
     ```
 
+1. Pass environment variables to set readonly status:
+
+    ```bash
+    -e 'READ_ONLY_FILESERVER=yes'
+    ```
+
+1. Pass environment variables to set CHMOD of written files:
+
+    ```bash
+    -e 'FILE_MODE_FILESERVER=0664'
+    ```
+
 1. (Optional) Mount supervisor log directory (R/W) to view the output of the file-server backend to `/var/log/supervisor`
 1. Link to the nEDM couchdb container (`--line name_of_container:db`)
 1. Export port(s) 80 and/or 5984
