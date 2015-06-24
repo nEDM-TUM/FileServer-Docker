@@ -1,7 +1,7 @@
 listen          80;
 listen          5984;
 location / {
-    proxy_pass http://@DB_NAME@:5984$redirect_uri$request_uri;
+    proxy_pass http://@DB_NAME@:5984@REDIRECT_URI@$request_uri;
     proxy_redirect    off;
     proxy_buffering   off;
     proxy_set_header Host $host;
@@ -28,7 +28,7 @@ location ~ /_(session|all_dbs)$ {
 }
 
 location ~ /page/([^/]*)/nedm/([^/]*) {
-    proxy_pass http://@DB_NAME@:5984$redirect_uri/page/$1/nedm%2F$2;
+    proxy_pass http://@DB_NAME@:5984@REDIRECT_URI@/page/$1/nedm%2F$2;
     proxy_redirect    off;
     proxy_buffering   off;
     proxy_set_header Host $host;
