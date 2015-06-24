@@ -20,14 +20,14 @@ location /_attachments {
     uwsgi_pass unix:/tmp/wsgi.sock;
 }
 
-location ~ /_(session|all_dbs)$ {
+location ~ ^/_(session|all_dbs)$ {
     proxy_pass http://@DB_NAME@:5984$request_uri;
     proxy_redirect    off;
     proxy_buffering   off;
     proxy_set_header Host $host;
 }
 
-location ~ /page/([^/]*)/nedm/([^/]*) {
+location ~ ^/page/([^/]*)/nedm/([^/]*)$ {
     proxy_pass http://@DB_NAME@:5984@REDIRECT_URI@/page/$1/nedm%2F$2;
     proxy_redirect    off;
     proxy_buffering   off;
