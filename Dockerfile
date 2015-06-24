@@ -1,17 +1,18 @@
 FROM nginx:latest
 
 RUN apt-get update -y \
-    && apt-get install -y --no-install-recommends python python-pip python-dev
+    && apt-get install -y --no-install-recommends \
+       python python-pip python-dev\
+       build-essential \
+       supervisor \
+       python-numpy \
+    && apt-get clean
 
-RUN pip install cloudant
-RUN apt-get install -y --no-install-recommends build-essential
-RUN apt-get install -y --no-install-recommends supervisor
-RUN pip install uwsgi
-RUN apt-get install -y --no-install-recommends python-numpy
+RUN pip install cloudant uwsgi
 
-RUN mkdir -p /home/uwsgi
-RUN mkdir -p /etc/uwsgi/vassals
-RUN mkdir /database_attachments
+RUN mkdir -p /home/uwsgi \
+    && mkdir -p /etc/uwsgi/vassals \
+    && mkdir /database_attachments
 
 VOLUME [ "/var/log/supervisor", "/database_attachments" ]
 
