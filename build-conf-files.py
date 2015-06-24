@@ -54,8 +54,6 @@ _filemode = str(os.environ.get("FILE_MODE_FILESERVER", 0444))
 _pyscript = "/home/uwsgi/handle_req.py"
 new_file = open(_pyscript).read()
 for re_, repl in [
-    ("@UID@", _uid),
-    ("@GID@", _gid),
     ("@FILEMODE@", _filemode),
     ]:
   new_file = new_file.replace(re_, repl)
