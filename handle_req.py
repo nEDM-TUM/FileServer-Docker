@@ -30,6 +30,13 @@ class BadRequest(LocalException):
 def log(msg):
     logging.info(msg)
 
+def replace_special_characters(file_name):
+    tmp = file_name
+    for re_, repl in [
+      (":", "-")
+      ]: tmp = tmp.replace(re_, repl)
+    return tmp
+
 def down_sample_file(start_resp, file_name, flags, header_only):
     """
     File structure is:
@@ -221,7 +228,7 @@ class Handler(object):
           "function" : self.env["REQUEST_METHOD"],
           "db" : apath[1],
           "id" : apath[2],
-          "attachment" : apath[3],
+          "attachment" : replace_special_characters(apath[3]),
           "flags" : apath[4:]
         }
 
