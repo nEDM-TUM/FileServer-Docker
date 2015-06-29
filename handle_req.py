@@ -170,7 +170,7 @@ class Handler(object):
             os.makedirs(adir)
         os.rename(self.file_location, save_path)
         os.chmod(save_path, _file_mode)
-        md5 = subprocess.check_output(["md5sum", save_path]).split(' ')[0]
+        #md5 = subprocess.check_output(["md5sum", save_path]).split(' ')[0]
         ast = os.stat(save_path)
         fn = os.path.basename(save_path)
         push_dict = {
@@ -182,7 +182,7 @@ class Handler(object):
               "crtime": ast.st_ctime,
               "mtime" : ast.st_mtime,
             },
-            "md5" : md5,
+            #"md5" : md5,
             "size" : ast.st_size
           }
         }
