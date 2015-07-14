@@ -51,6 +51,7 @@ The particular steps are explained in the following:
     ```bash
     -e 'NGX_VIRTUAL_SERVER[_my_suffix]=db.name.org@/path/to/rewrite'
     ```
+Note that the path should *never* end with a slash.
 
 1. (optional) Pass environment variables to set readonly status:
 
