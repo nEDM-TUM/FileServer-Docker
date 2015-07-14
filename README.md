@@ -38,7 +38,7 @@ An example command (to run as a daemon, swap `-it` with `-d`):
 docker run -it -p 5984:5984 -p 80:80\
   -v /volume1/Measurements:/database_attachments\
   -e "NGX_VIRTUAL_SERVER_2=db.nedm1@/nedm_head/_design/nedm_head/_rewrite"\
-  -e "NGX_VIRTUAL_SERVER_1=raid.nedm1@/"\
+  -e "NGX_VIRTUAL_SERVER_1=raid.nedm1@"\
   --name nEDM-FileServer --link nEDM-CouchDB:db registry.hub.docker.com/mgmarino/fileserver-docker:latest
 ```
 
