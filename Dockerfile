@@ -19,6 +19,7 @@ VOLUME [ "/var/log/supervisor", "/database_attachments" ]
 COPY ./nginx.conf /etc/nginx/nginx.conf
 COPY ./build-conf-files.py /build-conf-files.py
 COPY ./nginx-base.conf.in /nginx-base.conf.in
+COPY ./nginx-auth.conf.in /nginx-auth.conf.in
 COPY ./docker-entrypoint.sh /entrypoint.sh
 COPY ./wsgi.ini /etc/uwsgi/vassals/wsgi.ini
 COPY ./handle_req.py /home/uwsgi/handle_req.py
@@ -26,6 +27,8 @@ COPY ./supervisor-app.conf /etc/supervisor/conf.d/supervisor-app.conf
 
 EXPOSE 80
 EXPOSE 5984
+# The folloing only for docker connections!
+EXPOSE 5983
 
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["nginx"]
