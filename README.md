@@ -76,7 +76,8 @@ the CouchDB instance and routes the commands to it.
 
 ## API use examples
 
-The following are some examples as to how one can use the API.
+The following are some examples as to how one can use the API.  [pynedm](https://github.com/nEDM-TUM/Python-Slow-Control)
+provides functions to do all of this for you, so use it before rolling your own code, if possible.
 
 ### Upload
 
@@ -146,7 +147,7 @@ print json.dumps(o, indent=4)
 
 ### Download
 
-This is notable simpler, and this time we may use `requests`:
+This is notably simpler, and this time we may use `requests`:
 
 ```python
 ...
