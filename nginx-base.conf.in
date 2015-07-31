@@ -30,12 +30,28 @@ location ~ ^/page/([^/]*)/nedm/([^/]*)$ {
     proxy_set_header Host $host;
 }
 
+
+location ~ ^/(.*)/_couchdb/nedm/(.*)$ {
+    proxy_pass http://@DB_NAME@:5984/nedm%2F$2$is_args$args;
+    proxy_redirect    off;
+    proxy_buffering   off;
+    proxy_set_header Host $host;
+}
+
+location ~ ^/(.*)/_couchdb/(.*)$ {
+    proxy_pass http://@DB_NAME@:5984/$2$is_args$args;
+    proxy_redirect    off;
+    proxy_buffering   off;
+    proxy_set_header Host $host;
+}
+
 location /auth {
     internal;
     include uwsgi_params;
     uwsgi_pass_request_body off;
     uwsgi_pass unix:/tmp/wsgi.sock;
 }
+
 location /protected {
     internal;
     alias /database_attachments/;
