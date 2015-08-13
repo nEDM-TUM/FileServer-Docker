@@ -3,7 +3,7 @@ import shutil
 
 
 _attachments_header = """
-    limit_except HEAD PUT GET DELETE  { deny all; }
+    limit_except PUT GET DELETE  { deny all; }
     client_body_buffer_size    10M;
     client_body_temp_path      /database_attachments/_tmp/;
     client_body_in_file_only   on;
