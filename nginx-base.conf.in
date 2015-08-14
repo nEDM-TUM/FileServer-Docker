@@ -1,48 +1,46 @@
 listen          80;
 listen          5984;
-location / {
-    proxy_pass http://@DB_NAME@:5984@REDIRECT_URI@$request_uri;
-    proxy_redirect    off;
-    proxy_buffering   off;
-    proxy_set_header Host $host;
+
+location ^~ /_delete {
+    internal;
+    limit_except DELETE {
+        deny all;
+    }
+    include uwsgi_params;
+    uwsgi_param X_DELETE_DOCUMENT yes;
+    uwsgi_pass_request_body off;
+    uwsgi_pass unix:/tmp/wsgi.sock;
 }
 
-location /_attachments {
-    auth_request               /auth;
+location ^~ /_attachments {
+    auth_request /auth;
     @ATTACHMENTS_HEADER@
-
     include uwsgi_params;
     uwsgi_pass_request_body off;
     uwsgi_pass unix:/tmp/wsgi.sock;
 }
 
-location ~ ^/_(session|all_dbs)$ {
-    proxy_pass http://@DB_NAME@:5984$request_uri;
+location / {
+    if ($request_method = DELETE) {
+      rewrite ^/(.*) /_delete/$1 last;
+    }
+    proxy_pass http://@DB_NAME@:5984@REDIRECT_URI@$request_uri;
     proxy_redirect    off;
     proxy_buffering   off;
     proxy_set_header Host $host;
-}
 
-location ~ ^/page/([^/]*)/nedm/([^/]*)$ {
-    proxy_pass http://@DB_NAME@:5984@REDIRECT_URI@/page/$1/nedm%2F$2;
-    proxy_redirect    off;
-    proxy_buffering   off;
-    proxy_set_header Host $host;
-}
-
-
-location ~ ^/(.*)/_couchdb/nedm/(.*)$ {
-    proxy_pass http://@DB_NAME@:5984/nedm%2F$2$is_args$args;
-    proxy_redirect    off;
-    proxy_buffering   off;
-    proxy_set_header Host $host;
-}
-
-location ~ ^/(.*)/_couchdb/(.*)$ {
-    proxy_pass http://@DB_NAME@:5984/$2$is_args$args;
-    proxy_redirect    off;
-    proxy_buffering   off;
-    proxy_set_header Host $host;
+    location ~ ^/(.*)_couchdb/nedm/(.*)$ {
+        proxy_pass http://@DB_NAME@:5984/nedm%2F$2$is_args$args;
+    }
+    location ~ ^/(.*)_couchdb/(.*)$ {
+        proxy_pass http://@DB_NAME@:5984/$2$is_args$args;
+    }
+    location ~ ^/_(session|all_dbs)$ {
+        proxy_pass http://@DB_NAME@:5984$request_uri;
+    }
+    location ~ ^/page/([^/]*)/nedm/([^/]*)$ {
+        proxy_pass http://@DB_NAME@:5984@REDIRECT_URI@/page/$1/nedm%2F$2;
+    }
 }
 
 location /auth {

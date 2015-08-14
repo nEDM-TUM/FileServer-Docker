@@ -4,6 +4,7 @@ import requests
 import logging
 import os
 import subprocess
+import shutil
 logging.basicConfig(filename='/var/log/supervisor/wsgi.log',level=logging.DEBUG)
 
 _nginx_prefix = "protected"
@@ -188,6 +189,20 @@ class Handler(object):
         }
         return self.interact_with_db(db_path, 'put',data=json.dumps(push_dict))
 
+    def process_full_delete(self, save_path, db_path):
+        headers = {}
+        if "IF_MATCH" in self.env:
+            headers["If-Match"] = self.env["IF_MATCH"]
+        qs = self.env["QUERY_STRING"]
+        if qs != "":
+            db_path += "?" + qs
+        ret = self.interact_with_db(db_path, 'delete',headers=headers)
+        if "ok" not in ret.json():
+            return ret
+        # ignore errors if the path doesn't exist
+        shutil.rmtree(save_path, True)
+        return ret
+
     def process_delete(self, save_path, db_path):
         if os.path.exists(save_path):
             os.unlink(save_path)
@@ -198,10 +213,11 @@ class Handler(object):
         all_cookies = self.env.get("HTTP_COOKIE", "").split("; ")
         ret_dict = dict([c.split('=') for c in all_cookies if c.find("=") != -1])
         acct = cloudant.Account("http://db:5984")
-        headers = {}
+        if "headers" not in kwargs:
+            kwargs["headers"] = {}
         if "HTTP_AUTHORIZATION" in self.env:
-            headers["Authorization"] = self.env["HTTP_AUTHORIZATION"]
-        return getattr(acct, verb)(path, cookies=ret_dict, headers=headers,**kwargs)
+            kwargs["headers"]["Authorization"] = self.env["HTTP_AUTHORIZATION"]
+        return getattr(acct, verb)(path, cookies=ret_dict, **kwargs)
 
     def verify_user(self, path, **kwargs):
         func_type = None
@@ -213,7 +229,6 @@ class Handler(object):
         else:
             raise Denied(dict(error=True, reason="disallowed method"))
         res = self.interact_with_db(path, func_type, **kwargs)
-        log(json.dumps(res.json()))
         try:
           res.raise_for_status()
         except:
@@ -223,16 +238,28 @@ class Handler(object):
         raise Authorized(dict(ok=True))
 
     def path(self):
-        apath = [p for p in self.env["REQUEST_URI"].split('/') if p != '']
-        if len(apath) < 4:
-            raise Denied(dict(error=True, reason="malformed request'"))
-        return {
-          "function" : self.env["REQUEST_METHOD"],
-          "db" : apath[1],
-          "id" : apath[2],
-          "attachment" : replace_special_characters(apath[3]),
-          "flags" : apath[4:]
-        }
+        dpath = self.env["REQUEST_URI"].replace("nedm/", "nedm%2F").split("_couchdb")[-1]
+        apath = [p for p in dpath.split('/') if p != '']
+        if "X_DELETE_DOCUMENT" in self.env:
+            if len(apath) != 2:
+                raise Denied(dict(error=True, reason="malformed request'"))
+            return {
+              "function" : "DELETE",
+              "delete_all" : True,
+              "db" : apath[0],
+              "id" : apath[1].split("?")[0]
+            }
+        else:
+            if len(apath) < 4:
+                raise Denied(dict(error=True, reason="malformed request'"))
+            return {
+              "function" : self.env["REQUEST_METHOD"],
+              "delete_all" : False,
+              "db" : apath[1],
+              "id" : apath[2],
+              "attachment" : replace_special_characters(apath[3]),
+              "flags" : apath[4:]
+            }
 
 
 def application(env, start_response):
@@ -278,13 +305,22 @@ def application(env, start_response):
           ])
           return json.dumps(ret.json())
       elif fn == "DELETE":
-          push_to_path = '{db}/_design/nedm_default/_update/attachment/{id}?remove=true'.format(**info)
-          ret = handler.process_delete("/{save_dir}/{db_esc}/{id}/{attachment}".format(save_dir=_save_dir,**info), push_to_path)
-          log("Deleted")
-          start_response(str(ret.status_code), [
-            ('Content-Type', 'application/json'),
-          ])
-          return json.dumps(ret.json())
+          if info["delete_all"]:
+              delete_path = '{db}/{id}'.format(**info)
+              ret = handler.process_full_delete("/{save_dir}/{db_esc}/{id}".format(save_dir=_save_dir,**info), delete_path)
+              log("Deleted all")
+              start_response(str(ret.status_code), [
+                ('Content-Type', 'application/json'),
+              ])
+              return json.dumps(ret.json())
+          else:
+              push_to_path = '{db}/_design/nedm_default/_update/attachment/{id}?remove=true'.format(**info)
+              ret = handler.process_delete("/{save_dir}/{db_esc}/{id}/{attachment}".format(save_dir=_save_dir,**info), push_to_path)
+              log("Deleted")
+              start_response(str(ret.status_code), [
+                ('Content-Type', 'application/json'),
+              ])
+              return json.dumps(ret.json())
       else:
           raise Denied(dict(error=True, reason="disallowed method"))
     except:
