@@ -1,0 +1,3 @@
+_site*
+.jekyll_metadata
+Gemfile.lock

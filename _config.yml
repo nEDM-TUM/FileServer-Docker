@@ -1,0 +1,6 @@
+fierlingerwiki: https://fierlinger.wiki.tum.de/Administration+Page
+baseurl: /FileServer-Docker
+highlighter: pygments
+collections:
+  subsystems:
+    output: true
