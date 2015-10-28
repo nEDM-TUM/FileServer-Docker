@@ -16,5 +16,10 @@ Most requests are simply forwarded to the CouchDB backend and the nginx server
 listens on both the 80 and 5984 ports (serving up the same content on both).
 
 ### Available pages
-   {% for post in site.subsystems %}
-* [{{ post.title }}]({{ site.baseurl }}{{ post.url }}) - {{ post.description }}{% endfor %}
+<ul>
+{% for post in site.subsystems %}
+<li>
+<a href="{{ site.baseurl }}{{ post.url }}">{{ post.title }}</a> - {{ post.description }}
+</li>
+{% endfor %}
+</ul>
