@@ -17,5 +17,4 @@ listens on both the 80 and 5984 ports (serving up the same content on both).
 
 ### Available pages
    {% for post in site.subsystems %}
-* [{{ post.title }}]({{ site.baseurl }}{{ post.url }}) - {{ post.description }}
-   {% endfor %}
+* [{{ post.title }}]({{ site.baseurl }}{{ post.url }}) - {{ post.description }}{% endfor %}
