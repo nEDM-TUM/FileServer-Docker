@@ -47,3 +47,10 @@ Note, that it is important that no ports are forwarded in the CouchDB container
 to the external world.  This is because the nginx container sits in front of
 the CouchDB instance and routes the commands to it.
 
+### Disable httpd on Synology Station
+Port 80 must be available for the nginx to listen on. In DSM, a httpd service is using it by default.
+Then the nEDM-FileServer container cannot be started with the error message
+{% highlight bash %}
+Error starting userland proxy: listen tcp 0.0.0.0:80: bind: address already in use
+{% endhighlight %}
+A solution to disable httpd is given [here](http://stackoverflow.com/a/30985335). A DSM-update might restore the default behaviour and it has to be deactivated again.
