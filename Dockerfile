@@ -1,4 +1,4 @@
-FROM nginx:1.9.6
+FROM nginx:1.7.10
 
 RUN apt-get update -y \
     && apt-get install -y --no-install-recommends \
